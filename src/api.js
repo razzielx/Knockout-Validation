@@ -174,6 +174,39 @@
 				});
 			};
 
+			result.getDetails = function() {
+				var details = [];
+
+				// ensure we have latest changes
+				var latest = result();
+
+				if (!latest.length) {
+					// don't do anything if no errors occured
+					return [];
+				}
+
+				ko.utils.arrayForEach(context.validatables, function (observable) {
+					if (!observable.isValid()) {
+						var data = {}; // observable data for every rule
+
+						ko.utils.arrayForEach(observable.rules(), function(ctx) {
+							// allowing the caller to examine rule parameters for every rule
+							data[ctx.rule] = ctx.params;
+						});
+
+						details.push({
+							data: data,
+							observable: observable, 
+							error: observable.error(),
+							rule: observable.failedRule()
+						});
+					}
+				});
+
+				return details;
+			};			
+			
+
 			result.isAnyMessageShown = function () {
 				var invalidAndModifiedPresent;
 

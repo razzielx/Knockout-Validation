@@ -374,6 +374,39 @@ kv.configuration = configuration;
 				});
 			};
 
+			result.getDetails = function() {
+				var details = [];
+
+				// ensure we have latest changes
+				var latest = result();
+
+				if (!latest.length) {
+					// don't do anything if no errors occured
+					return [];
+				}
+
+				forEach(context.validatables, function (observable) {
+					if (!observable.isValid()) {
+						var data = {}; // observable data for every rule
+
+						forEach(observable.rules(), function(ctx) {
+							// allowing the caller to examine rule parameters for every rule
+							data[ctx.rule] = ctx.params;
+						});
+
+						details.push({
+							data: data,
+							observable: observable, 
+							error: observable.error(),
+							rule: observable.failedRule()
+						});
+					}
+				});
+
+				return details;
+			};			
+			
+
 			result.isAnyMessageShown = function () {
 				var invalidAndModifiedPresent;
 
@@ -1222,6 +1255,16 @@ ko.extenders['validatable'] = function (observable, options) {
 
 		observable.isModified = ko.observable(false);
 
+		// holds the name of the validation rule that has failed during the last validation procedure
+		observable.failedRule = ko.observable(null);
+
+		observable.error.subscribe(function (v) {
+			if(!v) {
+				// clearing the failed rule name when validation message is empty
+				observable.failedRule(null);
+			}
+		});		
+
 		// a semi-protected observable
 		observable.isValid = ko.computed(observable.__valid__);
 
@@ -1298,7 +1341,11 @@ function validateSync(observable, rule, ctx) {
 		observable.setError(kv.formatMessage(
 					ctx.message || rule.message,
 					unwrap(ctx.params),
-					observable));
+			observable));
+		
+		// remembering the name of the failed rule (passing it when "getDetails" is called)
+		observable.failedRule(ctx.rule);		
+
 		return false;
 	} else {
 		return true;
@@ -1334,6 +1381,10 @@ function validateAsync(observable, rule, ctx) {
 				msg || ctx.message || rule.message,
 				unwrap(ctx.params),
 				observable));
+
+			// remembering the name of the failed rule (passing it when "getDetails" is called)
+			observable.failedRule(ctx.rule);			
+			
 			observable.__valid__(isValid);
 		}
 

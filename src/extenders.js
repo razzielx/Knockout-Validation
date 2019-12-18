@@ -58,6 +58,16 @@ ko.extenders['validatable'] = function (observable, options) {
 
 		observable.isModified = ko.observable(false);
 
+		// holds the name of the validation rule that has failed during the last validation procedure
+		observable.failedRule = ko.observable(null);
+
+		observable.error.subscribe(function (v) {
+			if(!v) {
+				// clearing the failed rule name when validation message is empty
+				observable.failedRule(null);
+			}
+		});		
+
 		// a semi-protected observable
 		observable.isValid = ko.computed(observable.__valid__);
 
@@ -134,7 +144,11 @@ function validateSync(observable, rule, ctx) {
 		observable.setError(ko.validation.formatMessage(
 					ctx.message || rule.message,
 					ko.utils.unwrapObservable(ctx.params),
-					observable));
+			observable));
+		
+		// remembering the name of the failed rule (passing it when "getDetails" is called)
+		observable.failedRule(ctx.rule);		
+
 		return false;
 	} else {
 		return true;
@@ -170,6 +184,10 @@ function validateAsync(observable, rule, ctx) {
 				msg || ctx.message || rule.message,
 				ko.utils.unwrapObservable(ctx.params),
 				observable));
+
+			// remembering the name of the failed rule (passing it when "getDetails" is called)
+			observable.failedRule(ctx.rule);			
+			
 			observable.__valid__(isValid);
 		}
 

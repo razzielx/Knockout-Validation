@@ -433,3 +433,84 @@ QUnit.test('message parameter receives params and observable when async', functi
 });
 
 //#endregion
+
+//#region Extended validation details
+QUnit.module('Extended validation details');
+
+QUnit.test('Basic required', function(assert) {
+    var o = { required: true };
+
+    var vm = {
+        testObj: ko.observable().extend(o)
+    };
+
+    vm.errors = ko.validation.group(vm);
+
+    assert.ok(!vm.testObj.isValid(), vm.testObj.error());
+
+    var details = vm.errors.getDetails();
+
+    assert.ok(details && details.length === 1, 'Results are available');
+
+	assert.equal(details[0].observable, vm.testObj, 'Result references the correct observable');
+    assert.equal(details[0].rule, 'required', 'Result references the correct rule');
+    assert.equal(details[0].error, vm.testObj.error(), 'Result contains the correct error message');
+
+    assert.ok(details[0].data != null, 'Result contains data container');
+    assert.equal(details[0].data[details[0].rule], o[details[0].rule], 'Result references the correct extension data');
+});
+
+QUnit.test('Required with options', function(assert) {
+    var o = { required: { fieldId: 'some_id' } };
+
+    var vm = {
+        testObj: ko.observable().extend(o)
+    };
+
+    vm.errors = ko.validation.group(vm);
+
+    assert.ok(!vm.testObj.isValid(), vm.testObj.error());
+
+    var details = vm.errors.getDetails();
+
+    assert.ok(details && details.length === 1, 'Results are available');
+
+	assert.equal(details[0].observable, vm.testObj, 'Result references the correct observable');
+    assert.equal(details[0].rule, 'required', 'Result references the correct rule');
+    assert.equal(details[0].error, vm.testObj.error(), 'Result contains the correct error message');
+
+    assert.ok(details[0].data != null, 'Result contains data container');
+    assert.equal(details[0].data[details[0].rule], o[details[0].rule], 'Result references the correct extension data');
+    assert.equal(details[0].data[details[0].rule].fieldId, 'some_id', 'Result\'s extension data is the same');
+});
+
+QUnit.test('Multiple errors', function(assert) {
+    var vm = {
+        testObj: ko.observable().extend({ required: true }),
+        anotherProp: ko.observable().extend({ required: true })
+    };
+
+    vm.errors = ko.validation.group(vm);
+
+    assert.ok(!vm.testObj.isValid(), vm.testObj.error());
+
+    var details = vm.errors.getDetails();
+
+    assert.ok(details && details.length === 2, 'Results are available');
+
+	var ensureResult = function (i, p) {
+		var observable = p();
+
+		assert.equal(details[i].observable, observable, 'Result references the correct observable');
+		assert.equal(details[i].rule, 'required', 'Result references the correct rule');
+		assert.equal(details[i].error, observable.error(), 'Result contains the correct error message');
+
+		assert.ok(details[i].data != null, 'Result contains data container');
+		assert.equal(details[i].data[details[i].rule], true, 'Result contains the same values for extension data');
+	};
+
+    ensureResult(0, function () { return vm.testObj; });
+    ensureResult(1, function () { return vm.anotherProp; });
+});
+
+//#endregion 
